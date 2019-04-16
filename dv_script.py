@@ -5,7 +5,7 @@ import re
 from functools import wraps
 from pprint import pprint
 
-data = pd.read_csv('../data/Data.csv')
+data = pd.read_csv('../data/Data.csv',sep=',', error_bad_lines=False, index_col=False, dtype='unicode')
 
 
 def printFunction(name, args, kwargs):
@@ -71,14 +71,31 @@ def is_number(qid, debug=False):
     return False i there is any value is not number
     Otherwise True
     '''
-    error = []
-    is_number = is_numeric_dtype(data[qid])
+    number = data[qid].str.isdigit()
+    error = data[~number]['record'].tolist()
 
-    if not is_number:
-        error = data[qid].str.isnumeric()
-        error = data[~error]['record'].tolist()
+    return not (len(error)), error
 
-    return (is_number, error)
+
+@printError
+def is_float(qid, debug=False):
+    '''
+    return False i there is any value is not number
+    Otherwise True
+    '''
+    number = data[qid]
+
+    result = []
+    for i in number:
+        try:
+            i = float(i)
+            result.append(True)
+        except:
+            result.append(False)
+
+    error = data[~pd.Series(result)]['record'].tolist()
+
+    return not (len(error)), error
 
 
 @printError
@@ -100,6 +117,8 @@ def check_range(qid, vrange, blank=True, debug=False):
         else:
             lower_upper = list(map(int, i.split('-')))
             trange = trange | set(range(lower_upper[0], lower_upper[1] + 1))
+
+    trange = list(map(str, trange))
 
     ranged = data[qid].isin(trange)
     empty_row = data[qid].isnull()
@@ -230,3 +249,18 @@ def check_checkbox_multi_grid(qid, rows, cols, atleast=1, atmost=9999, grouping=
 # check_logic('hidPanel', [1], 'S5', [None])
 
 #######SCRIPT########
+is_non_empty('record')
+is_number('record')
+
+is_non_empty('dTrack')
+check_range('dTrack', [0], blank=False)
+
+is_non_empty('uuid')
+
+check_range('status', [3], blank=False)
+
+is_empty("Country")
+
+is_non_empty('qtimeMin')
+is_float('qtimeMin')
+
