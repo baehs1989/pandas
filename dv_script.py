@@ -5,7 +5,7 @@ import re
 from functools import wraps
 from pprint import pprint
 
-data = pd.read_csv('../data/Data.csv',sep=',', error_bad_lines=False, index_col=False, dtype='unicode')
+data = pd.read_csv('../data/data.csv',sep=',', error_bad_lines=False, index_col=False, dtype='unicode')
 
 
 def printFunction(name, args, kwargs):
@@ -71,7 +71,8 @@ def is_number(qid, debug=False):
     return False i there is any value is not number
     Otherwise True
     '''
-    number = data[qid].str.isdigit()
+
+    number = data[qid].str.isdigit().fillna(True)
     error = data[~number]['record'].tolist()
 
     return not (len(error)), error
@@ -192,7 +193,11 @@ def check_checkbox(qid, options, atleast=1, atmost=99999, debug=False):
     group = []
     for eachOption in toptions:
         group.append(('{}{}').format(qid, eachOption))
+
     tdata = data[group]
+
+    tdata = tdata.apply(pd.to_numeric)
+
     #     tadata = tdata.loc[:,'total'] = tdata.sum(axis = 1, skipna = True)
 
     tdata = tdata.assign(total=tdata.sum(axis=1, skipna=True))
@@ -249,18 +254,6 @@ def check_checkbox_multi_grid(qid, rows, cols, atleast=1, atmost=9999, grouping=
 # check_logic('hidPanel', [1], 'S5', [None])
 
 #######SCRIPT########
-is_non_empty('record')
-is_number('record')
 
-is_non_empty('dTrack')
-check_range('dTrack', [0], blank=False)
-
-is_non_empty('uuid')
-
-check_range('status', [3], blank=False)
-
-is_empty("Country")
-
-is_non_empty('qtimeMin')
-is_float('qtimeMin')
-
+check_checkbox('S4', ['r:1-5', 'r:7-10', 'r98'])
+check_checkbox('hS4Term', ['r:1-2'], atleast=0, atmost=0)
