@@ -104,10 +104,8 @@ def check_range(qid, vrange, blank=True, debug=False):
     '''
     return False if any cells is out of a given range
     otherwise True
-
     blank = True, blank is allowed
     vrange = 1,'2','3' or '1-4'
-
     '''
     trange = set()
     for i in vrange:
@@ -188,24 +186,38 @@ def generate_question(qid, rows, cols):
 #     return qids
 
 @printError
-def check_checkbox(qid, options, atleast=1, atmost=99999, debug=False):
-    toptions = generate_rows_cols(options)
-    group = []
-    for eachOption in toptions:
-        group.append(('{}{}').format(qid, eachOption))
+def check_checkbox(qid, options, exclusive=None, atleast=1, atmost=99999, blank=True, debug=False):
+    toptions = set(generate_rows_cols(options))
+    texclusives = set(generate_rows_cols(exclusive) if exclusive else [])
+    toptions -= texclusives
 
-    tdata = data[group]
+    option_labels = []
+    exclusive_labels = []
+
+    for eachOption in toptions:
+        option_labels.append('{}{}'.format(qid, eachOption))
+    for eachOption in texclusives:
+        exclusive_labels.append('{}{}'.format(qid, eachOption))
+
+    tdata = data[option_labels + exclusive_labels]
+
+    nan = pd.Series([True] * tdata.shape[0])
+    if blank:
+        for column in tdata:
+            nan = nan & tdata[column].isna()
+        nan = ~nan
 
     tdata = tdata.apply(pd.to_numeric)
 
-    #     tadata = tdata.loc[:,'total'] = tdata.sum(axis = 1, skipna = True)
-
     tdata = tdata.assign(total=tdata.sum(axis=1, skipna=True))
+    tdata = tdata.assign(osum=tdata[option_labels].sum(axis=1, skipna=True))
+    tdata = tdata.assign(esum=tdata[exclusive_labels].sum(axis=1, skipna=True))
 
     atleast = tdata['total'] < atleast
     atmost = tdata['total'] > atmost
+    exl = (tdata['osum'] > 0) & (tdata['esum'] == 1)
 
-    error = data[atleast | atmost]['record'].tolist()
+    error = data[(atleast | atmost | exl) & nan ]['record'].tolist()
 
     return not (len(error)), error
 
@@ -254,6 +266,29 @@ def check_checkbox_multi_grid(qid, rows, cols, atleast=1, atmost=9999, grouping=
 # check_logic('hidPanel', [1], 'S5', [None])
 
 #######SCRIPT########
+# is_non_empty('record')
+# is_number('record')
 
-check_checkbox('S4', ['r:1-5', 'r:7-10', 'r98'])
-check_checkbox('hS4Term', ['r:1-2'], atleast=0, atmost=0)
+# check_range('dTrack', [0], blank=False)
+# check_range('status', [3], blank=False)
+
+# is_number('dmaDataZIP_CODEc2')
+
+#     tdata = tdata.apply(pd.to_numeric)
+
+#     #     tadata = tdata.loc[:,'total'] = tdata.sum(axis = 1, skipna = True)
+
+#     tdata = tdata.assign(total=tdata.sum(axis=1, skipna=True))
+
+#     atleast = tdata['total'] < atleast
+#     atmost = tdata['total'] > atmost
+
+#     error = data[atleast | atmost]['record'].tolist()
+
+#     return not (len(error)), error
+
+check_checkbox('HIC01', ['r:1-6', 'r:98-99'], ['r98', 'r99'], blank=False)
+
+check_checkbox('HIC02', ['r:1-4', 'r98'], ['r98'])
+
+check_checkbox('progHIC03', ['r:1-4', 'r97'], debug=True)
