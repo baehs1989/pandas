@@ -239,6 +239,33 @@ def check_logic(qid1, cond1, qid2, cond2):
 
     return not (len(error)), error
 
+@printError
+def check_logic_checkbox(qid1, cond1, qid2, options, debug=False):
+    '''
+    :param qid1: qid where logic is based on
+    :param cond1: masking logic
+    :param qid2: checkbox question to be chcked
+    :param options: options in the checkbox question
+    '''
+
+    options = generate_rows_cols(options)
+    option_labels = []
+    for eachOption in options:
+        option_labels.append('{}{}'.format(qid2, eachOption))
+
+    tdata = data[option_labels]
+    tdata = tdata.apply(pd.to_numeric)
+
+    nan = pd.Series([True] * tdata.shape[0])
+    for column in tdata:
+        nan = nan & tdata[column].isna()
+
+    data_cond1 = data[qid1].isin(map(str, cond1))
+
+    error = data[data_cond1 & nan]['record'].tolist()
+
+    return not (len(error)), error
+
 
 def check_checkbox_multi_grid(qid, rows, cols, atleast=1, atmost=9999, grouping='rows'):
     trows = generate_rows_cols(rows)
@@ -256,39 +283,3 @@ def check_checkbox_multi_grid(qid, rows, cols, atleast=1, atmost=9999, grouping=
             for eachRow in trows:
                 group.append(('{}{}{}').format(qid, eachRow, eachCol))
             print(group)
-
-
-# is_non_empty('S5')
-# is_identical('S1', 'S2')
-# check_range('S1',['1-3'], blank=False)
-# check_checkbox('S4', ['r:1-5', 'r:7-10', 'r98'])
-# check_logic('hidPanel', [2], 'S5', [1,2,3])
-# check_logic('hidPanel', [1], 'S5', [None])
-
-#######SCRIPT########
-# is_non_empty('record')
-# is_number('record')
-
-# check_range('dTrack', [0], blank=False)
-# check_range('status', [3], blank=False)
-
-# is_number('dmaDataZIP_CODEc2')
-
-#     tdata = tdata.apply(pd.to_numeric)
-
-#     #     tadata = tdata.loc[:,'total'] = tdata.sum(axis = 1, skipna = True)
-
-#     tdata = tdata.assign(total=tdata.sum(axis=1, skipna=True))
-
-#     atleast = tdata['total'] < atleast
-#     atmost = tdata['total'] > atmost
-
-#     error = data[atleast | atmost]['record'].tolist()
-
-#     return not (len(error)), error
-
-check_checkbox('HIC01', ['r:1-6', 'r:98-99'], ['r98', 'r99'], blank=False)
-
-check_checkbox('HIC02', ['r:1-4', 'r98'], ['r98'])
-
-check_checkbox('progHIC03', ['r:1-4', 'r97'], debug=True)
