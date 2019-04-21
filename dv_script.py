@@ -292,6 +292,20 @@ class Data():
         self.data = pd.read_csv(data, sep=',', error_bad_lines=False, index_col=False, dtype='unicode')
 
     @staticmethod
+    def __getRanges(ranges):
+        trange = set()
+        for i in ranges:
+            if type(i) == int:
+                trange.add(i)
+            elif '-' not in i:
+                trange.add(int(i))
+            else:
+                lower_upper = list(map(int, i.split('-')))
+                trange = trange | set(range(lower_upper[0], lower_upper[1] + 1))
+        trange = list(map(str, trange))
+        return trange
+
+    @staticmethod
     def __printFunction(name, args, kwargs):
         args = list(map(lambda x: str(x), args))
 
@@ -348,25 +362,28 @@ class Data():
         return not (len(error)), error
 
     @__printError
-    def is_number(self, qid, debug=False):
+    def is_number(self, qid, blank=True, debug=False):
         '''
         return False i there is any value is not number
         Otherwise True
         '''
 
-        number = self.data[qid].str.isdigit().fillna(True)
+        number = self.data[qid].str.isdigit().fillna(blank)
         error = self.data[~number]['record'].tolist()
 
         return not (len(error)), error
 
 
     @__printError
-    def is_float(self, qid, debug=False):
+    def is_float(self, qid, blank=True, debug=False):
         '''
         return False i there is any value is not number
         Otherwise True
         '''
-        number = self.data[qid]
+
+        place_holder = blank or "NNN"
+
+        number = self.data[qid].fillna(place_holder)
 
         result = []
         for i in number:
@@ -389,17 +406,8 @@ class Data():
         blank = True, blank is allowed
         vrange = 1,'2','3' or '1-4'
         '''
-        trange = set()
-        for i in vrange:
-            if type(i) == int:
-                trange.add(i)
-            elif '-' not in i:
-                trange.add(int(i))
-            else:
-                lower_upper = list(map(int, i.split('-')))
-                trange = trange | set(range(lower_upper[0], lower_upper[1] + 1))
 
-        trange = list(map(str, trange))
+        trange = Data.__getRanges(vrange)
 
         ranged = self.data[qid].isin(trange)
         empty_row = self.data[qid].isnull()
@@ -498,7 +506,7 @@ class Data():
 
 
     @__printError
-    def check_logic(self, qid1, cond1, qid2, cond2):
+    def check_logic(self, qid1, cond1, qid2, cond2, debug=False):
         '''
         check masking
         qid1: column name where cond based
@@ -507,8 +515,13 @@ class Data():
         cond2: accecpt able value in cond1
         '''
 
-        data_cond1 = self.data[qid1].isin(cond1)
-        data_cond2 = self.data[qid2].isin(cond2)
+        trange1 = Data.__getRanges(cond1)
+
+        trange2 = Data.__getRanges(cond2)
+
+
+        data_cond1 = self.data[qid1].isin(list(map(str, trange1)))
+        data_cond2 = self.data[qid2].isin(list(map(str, trange2)))
 
         error = self.data[data_cond1 & ~data_cond2]['record'].tolist()
 
